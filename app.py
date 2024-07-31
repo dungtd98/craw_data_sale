@@ -1,141 +1,39 @@
-import streamlit as st
-import pandas as pd
-from utils import convert_columns_to_romaji, get_email_from_romaji
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
+from PIL import Image, ImageDraw, ImageFont
 
-# Hàm gọi API để lấy danh sách email
+def edit_business_card(template_path, output_path, name, job_title, phone_number, company_address, email_address):
+    # Open the business card template
+    template = Image.open(template_path)
+    draw = ImageDraw.Draw(template)
+    
+    # Define font and text positions
+    font = ImageFont.load_default(size=15)
+    
+    
+    # Define positions for each text element
+    name_position = (50, 50)
+    job_title_position = (50, 64)
+    phone_number_position = (50, 112)
+    email_address_position = (50, 130)
+    company_address_position = (50, 165)
+    
+    
+    # Add text to the template
+    draw.text(name_position, f"{name}", font=font, fill="black")
+    draw.text(job_title_position, f"{job_title}", font=font, fill="black")
+    draw.text(phone_number_position, f"Phone: {phone_number}", font=font, fill="black")
+    draw.text(company_address_position, f"Address: {company_address}", font=font, fill="black")
+    draw.text(email_address_position, f"Email: {email_address}", font=font, fill="black")
+    
+    # Save the edited business card
+    template.save(output_path)
 
-# Thiết lập giao diện Streamlit
-st.title("Excel Column Selector and Converter")
-
-# Sử dụng st.sidebar để tạo các trang
-page = st.sidebar.selectbox("Chọn trang", ["Upload File", "Confirm Selection"])
-
-# Trang upload file
-if page == "Upload File":
-    st.header("Upload Excel File")
-    uploaded_file = st.file_uploader("Chọn file Excel", type=["xlsx"])
-    if uploaded_file:
-        sheets = pd.ExcelFile(uploaded_file).sheet_names
-        sheet = st.selectbox("Chọn sheet", sheets)
-        df = pd.read_excel(uploaded_file, sheet_name=sheet, header=3)
-        
-        # Convert all column names to strings
-        df.columns = df.columns.astype(str)
-        
-        st.dataframe(df)
-        
-        columns = st.multiselect("Chọn các cột để hiển thị", df.columns)
-        romaji_columns = st.multiselect("Chọn các cột để chuyển sang Romaji", columns)
-        domain_column = st.selectbox("Chọn cột là domain của công ty", df.columns)
-        
-        if st.button("Confirm"):
-            st.session_state['df'] = df
-            st.session_state['columns'] = columns
-            st.session_state['romaji_columns'] = romaji_columns
-            st.session_state['domain_column'] = domain_column
-            st.session_state['uploaded_file'] = uploaded_file
-            st.session_state['sheet'] = sheet
-            st.success("Đã xác nhận các cột đã chọn. Chuyển sang trang Confirm Selection.")
-
-# Trang xác nhận lựa chọn
-if page == "Confirm Selection":
-    st.header("Confirm Column Selection")
-    if 'df' in st.session_state and 'columns' in st.session_state:
-        df = st.session_state['df']
-        columns = st.session_state['columns']
-        romaji_columns = st.session_state['romaji_columns']
-        domain_column = st.session_state['domain_column']
-        uploaded_file = st.session_state['uploaded_file']
-        sheet = st.session_state['sheet']
-        
-        # Đổi tên cột domain thành "company domain"
-        df = df.rename(columns={domain_column: 'company domain'})
-        
-        st.write(f"File: {uploaded_file.name}")
-        st.write(f"Sheet: {sheet}")
-        
-        # Chuyển đổi các cột được chọn sang Romaji
-        df = convert_columns_to_romaji(df, romaji_columns)
-        
-        # Hiển thị dữ liệu của các cột đã chọn và các cột đã chuyển đổi sang Romaji
-        display_columns = columns + [f"{col} Romaji" for col in romaji_columns]
-        
-        # Thêm "company domain" vào display_columns nếu nó không có trong columns ban đầu
-        if 'company domain' not in display_columns:
-            display_columns.append('company domain')
-        
-        # Đảm bảo tất cả các cột tồn tại trong DataFrame trước khi hiển thị
-        display_columns = [col for col in display_columns if col in df.columns]
-        
-        # Tạo checkbox cho từng hàng
-        gb = GridOptionsBuilder.from_dataframe(df[display_columns])
-        gb.configure_selection('multiple', use_checkbox=True, groupSelectsChildren=True)
-        grid_options = gb.build()
-
-        grid_response = AgGrid(
-            df[display_columns],
-            gridOptions=grid_options,
-            data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-            fit_columns_on_grid_load=True,
-            enable_enterprise_modules=True,
-            height=400,
-            width='100%',
-            reload_data=True
-        )
-        
-        selected_rows = pd.DataFrame(grid_response['selected_rows'])
-        
-        if st.button("Generate email"):
-            if selected_rows.empty:
-                st.warning("Vui lòng chọn ít nhất một hàng để gửi API.")
-            else:
-                # Chỉ lấy các cột Romaji để gửi API
-                romaji_columns_selected = [f"{col} Romaji" for col in romaji_columns]
-                
-                if not set(romaji_columns_selected).issubset(selected_rows.columns):
-                    st.error("Error: Not all selected columns are in the DataFrame")
-                else:
-                    emails_list = []
-                    for idx, row in selected_rows.iterrows():
-                        romaji_data = row[romaji_columns_selected].to_dict()
-                        company_domain = row['company domain']
-                        emails = get_email_from_romaji(company_domain, romaji_data)
-                        
-                        for email in emails:
-                            new_row = row.copy()
-                            new_row['Possible Email'] = email
-                            emails_list.append(new_row)
-                    
-                    emails_df = pd.DataFrame(emails_list)
-                    
-                    # Hiển thị bảng với checkbox và nút "Generate business card"
-                    gb = GridOptionsBuilder.from_dataframe(emails_df)
-                    gb.configure_selection('multiple', use_checkbox=True, groupSelectsChildren=True)
-                    grid_options = gb.build()
-
-                    grid_response = AgGrid(
-                        emails_df,
-                        gridOptions=grid_options,
-                        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-                        update_mode=GridUpdateMode.SELECTION_CHANGED,
-                        fit_columns_on_grid_load=True,
-                        enable_enterprise_modules=True,
-                        height=400,
-                        width='100%',
-                        reload_data=True
-                    )
-                    
-                    selected_emails = pd.DataFrame(grid_response['selected_rows'])
-                    
-                    if st.button("Generate business card"):
-                        if selected_emails.empty:
-                            st.warning("Vui lòng chọn ít nhất một hàng để tạo danh thiếp.")
-                        else:
-                            # Hiển thị thông báo thành công cho từng hàng đã chọn
-                            for idx, row in selected_emails.iterrows():
-                                st.success(f"Generate success for {row['Possible Email']}, Company: {row['company domain']}, Name: {row['first_name']} {row['last_name']}")
-    else:
-        st.warning("Vui lòng upload file và chọn các cột trước.")
-
+# Example usage
+edit_business_card(
+    template_path="./assets/Namecard.png",
+    output_path="./assets/edited_business_card.png",
+    name="John Doe",
+    job_title="Software Engineer",
+    phone_number="+1234567890",
+    company_address="1234 Elm Street, City, Country",
+    email_address="john.doe@example.com"
+)
