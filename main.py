@@ -140,33 +140,53 @@ def generate_emails(selected_rows, romaji_columns_selected):
             emails_list.append(new_row)
     return pd.DataFrame(emails_list) if emails_list else pd.DataFrame()
 
+# def display_generated_emails(emails_df):
+#     if 'selected_emails' not in st.session_state:
+#         st.session_state['selected_emails'] = pd.DataFrame()
+
+#     gb = GridOptionsBuilder.from_dataframe(emails_df)
+#     gb.configure_selection('multiple', use_checkbox=True, groupSelectsChildren=True)
+#     grid_options = gb.build()
+    
+#     grid_response = AgGrid(
+#         emails_df,
+#         gridOptions=grid_options,
+#         data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+#         update_mode=GridUpdateMode.SELECTION_CHANGED,
+#         fit_columns_on_grid_load=True,
+#         enable_enterprise_modules=True,
+#         height=400,
+#         width='100%',
+#         reload_data=False,
+#         key="generated_emails_table"
+#     )
+    
+#     selected_emails = pd.DataFrame(grid_response['selected_rows'])
+#     st.session_state['selected_emails'] = selected_emails
+
+#     if st.button("Generate business card"):
+#         generate_business_cards(st.session_state['selected_emails'])
+
 def display_generated_emails(emails_df):
     if 'selected_emails' not in st.session_state:
         st.session_state['selected_emails'] = pd.DataFrame()
-
-    gb = GridOptionsBuilder.from_dataframe(emails_df)
-    gb.configure_selection('multiple', use_checkbox=True, groupSelectsChildren=True)
-    grid_options = gb.build()
+    st.table(emails_df)
+    for idx, row in emails_df.iterrows():
+        name = row.get('Contact point', '')
+        job_title = row.get('job title', '')
+        phone_number = row.get('company phone', '')
+        company_address = row.get('company address', '')
+        email_address = row.get('Verified Email', '')
+        card_image = generate_business_card(
+                template_path='./assets/Namecard.png',
+                name=name,
+                job_title=job_title,
+                phone_number=phone_number,
+                company_address=company_address,
+                email_address=email_address
+            )
+        st.image(card_image, caption=f"Business Card for {name}", use_column_width=True)
     
-    grid_response = AgGrid(
-        emails_df,
-        gridOptions=grid_options,
-        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
-        fit_columns_on_grid_load=True,
-        enable_enterprise_modules=True,
-        height=400,
-        width='100%',
-        reload_data=False,
-        key="generated_emails_table"
-    )
-    
-    selected_emails = pd.DataFrame(grid_response['selected_rows'])
-    st.session_state['selected_emails'] = selected_emails
-
-    if st.button("Generate business card"):
-        generate_business_cards(st.session_state['selected_emails'])
-
 def generate_business_cards(selected_emails):
     if selected_emails.empty:
         st.warning("Vui lòng chọn ít nhất một hàng để tạo danh thiếp.")
@@ -185,7 +205,7 @@ def generate_business_cards(selected_emails):
                 company_address=company_address,
                 email_address=email_address
             )
-            st.image(card_image, caption=f"Business Card for {name}", use_column_width=True)
+            st.image(card_image, caption=f"Business Card for {name} and email: {email_address}", use_column_width=True)
 
 st.title("Excel Column Selector and Converter")
 

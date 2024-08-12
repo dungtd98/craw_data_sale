@@ -113,18 +113,19 @@ def download_and_extract_emails(url):
     return emails
 
 
-def generate_business_card(template_path, output_path, name, job_title, phone_number, company_address, email_address):
+def generate_business_card(template_path, name, job_title, phone_number, company_address, email_address):
     # Open the business card template
     template = Image.open(template_path)
     draw = ImageDraw.Draw(template)
     
     # Define font and text positions
-    font = ImageFont.load_default(size=15)
-    
+    # font = ImageFont.load_default(size=15)
+    font_path = "NotoSansJP-VariableFont_wght.ttf"  # Đường dẫn đến file font Noto Sans JP
+    font = ImageFont.truetype(font_path, size=15)
     
     # Define positions for each text element
     name_position = (50, 50)
-    job_title_position = (50, 64)
+    job_title_position = (50, 74)
     phone_number_position = (50, 112)
     email_address_position = (50, 130)
     company_address_position = (50, 165)
