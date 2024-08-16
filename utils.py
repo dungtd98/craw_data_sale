@@ -3,7 +3,12 @@ import pykakasi
 import requests, json
 import ast, csv, re, io
 from PIL import Image, ImageDraw, ImageFont
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
+LLM_HOST = os.getenv("LLM_HOST")
+EMAIL_VERIFY_API_KEY = os.getenv("EMAIL_VERIFY_API_KEY")
 
 kakasi = pykakasi.kakasi()
 def convert_to_romaji(text):
@@ -40,7 +45,7 @@ def extract_email_array(text):
         return []
 
 def get_email_from_romaji(domain, name):
-    url = "http://localhost:1234/v1/chat/completions"
+    url = f"{LLM_HOST}/v1/chat/completions"
     payload = json.dumps({
     "model": "bartowski/Phi-3.1-mini-4k-instruct-GGUF",
     "messages": [
@@ -92,7 +97,7 @@ def verify_email(emails):
             writer.writerow([email])
     
     # Gửi file CSV này đến một API khác
-    B = EmailListVerifyBulk('d1PX3kpDLRIFFk39GjuNX', csv_file_path)
+    B = EmailListVerifyBulk(EMAIL_VERIFY_API_KEY, csv_file_path)
     B.upload()
     verified_email_list_url = B.get_info()
     return download_and_extract_emails(verified_email_list_url)
