@@ -45,7 +45,7 @@ def extract_email_array(text):
         return []
 
 def get_email_from_romaji(domain, name):
-    url = f"{LLM_HOST}/v1/chat/completions"
+    url = f"https://f881-14-232-214-101.ngrok-free.app/v1/chat/completions"
     payload = json.dumps({
     "model": "bartowski/Phi-3.1-mini-4k-instruct-GGUF",
     "messages": [
@@ -97,7 +97,7 @@ def verify_email(emails):
             writer.writerow([email])
     
     # Gửi file CSV này đến một API khác
-    B = EmailListVerifyBulk(EMAIL_VERIFY_API_KEY, csv_file_path)
+    B = EmailListVerifyBulk('d1PX3kpDLRIFFk39GjuNX', csv_file_path)
     B.upload()
     verified_email_list_url = B.get_info()
     return download_and_extract_emails(verified_email_list_url)
