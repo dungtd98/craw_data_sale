@@ -133,8 +133,8 @@ def generate_emails(selected_rows, romaji_columns_selected):
         romaji_data = row[romaji_columns_selected].to_dict()
         company_domain = row['company domain']
         emails = get_email_from_romaji(company_domain, romaji_data)
-        # verified_email = verify_email(emails)
-        for email in emails:
+        verified_email = verify_email(emails)
+        for email in verified_email:
             new_row = row.copy()
             new_row['Verified Email'] = email
             emails_list.append(new_row)
